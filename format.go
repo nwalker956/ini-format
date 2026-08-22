@@ -18,10 +18,11 @@ const (
 )
 
 type entry struct {
-	kind  lineKind
-	text  string // comment or raw text
-	key   string
-	value string
+	kind    lineKind
+	text    string // comment or raw text
+	key     string
+	value   string
+	comment string // inline trailing comment on a kindEntry line, without the marker
 }
 
 type section struct {
@@ -58,8 +59,8 @@ func parse(r io.Reader) ([]*section, error) {
 		case strings.Contains(trimmed, "="):
 			idx := strings.Index(trimmed, "=")
 			key := strings.TrimSpace(trimmed[:idx])
-			value := strings.TrimSpace(trimmed[idx+1:])
-			cur.items = append(cur.items, entry{kind: kindEntry, key: key, value: value})
+			value, comment := splitInlineComment(strings.TrimSpace(trimmed[idx+1:]))
+			cur.items = append(cur.items, entry{kind: kindEntry, key: key, value: value, comment: comment})
 
 		default:
 			// Not blank, not a comment, no '=' and no brackets: keep it
@@ -71,6 +72,27 @@ func parse(r io.Reader) ([]*section, error) {
 		return nil, err
 	}
 	return sections, nil
+}
+
+// splitInlineComment looks for a ';' or '#' outside of any quoted portion of
+// value and, if found, treats everything from there on as a trailing
+// comment. Quotes let a value contain those characters literally, e.g.
+// path = "C:\later;dir".
+func splitInlineComment(value string) (string, string) {
+	var quote rune
+	for i, r := range value {
+		switch {
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+		case r == '"' || r == '\'':
+			quote = r
+		case r == ';' || r == '#':
+			return strings.TrimSpace(value[:i]), strings.TrimSpace(value[i+1:])
+		}
+	}
+	return value, ""
 }
 
 // sortEntries reorders the key/value lines in a section alphabetically by
@@ -110,7 +132,11 @@ func renderItems(items []entry) []string {
 		case kindRaw:
 			lines = append(lines, it.text)
 		case kindEntry:
-			lines = append(lines, it.key+" = "+it.value)
+			line := it.key + " = " + it.value
+			if it.comment != "" {
+				line += " ; " + it.comment
+			}
+			lines = append(lines, line)
 		}
 	}
 	return lines

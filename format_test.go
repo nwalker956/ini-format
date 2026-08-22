@@ -74,6 +74,31 @@ func TestFormat(t *testing.T) {
 			sort: true,
 			want: "[a]\n; about zebra\napple = 2\nzebra = 1\n",
 		},
+		{
+			name: "extracts inline trailing comment",
+			in:   "port=8080 ; default port\n",
+			want: "port = 8080 ; default port\n",
+		},
+		{
+			name: "extracts inline trailing comment with hash marker",
+			in:   "port=8080 # default port\n",
+			want: "port = 8080 ; default port\n",
+		},
+		{
+			name: "inline comment with no space before marker",
+			in:   "port=8080;default port\n",
+			want: "port = 8080 ; default port\n",
+		},
+		{
+			name: "quoted value keeps marker characters literal",
+			in:   `path="C:\later;dir"` + "\n",
+			want: `path = "C:\later;dir"` + "\n",
+		},
+		{
+			name: "quoted value can still have a real inline comment after it",
+			in:   `name="a;b" ; that's the name` + "\n",
+			want: `name = "a;b" ; that's the name` + "\n",
+		},
 	}
 
 	for _, tc := range cases {

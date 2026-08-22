@@ -15,7 +15,8 @@ to read.
 `ini-format` parses that mess and rewrites it with:
 
 - a single `key = value` spacing style
-- comments normalised to `; text`
+- comments normalised to `; text`, including inline trailing comments
+  (`port = 8080 # default` becomes `port = 8080 ; default`)
 - at most one blank line between entries
 - exactly one blank line before every section header
 - no leading or trailing blank lines
@@ -74,8 +75,6 @@ path = /var/log/app.log
 
 ## Current limitations
 
-- Inline (trailing) comments on a `key = value` line are treated as part
-  of the value, not stripped out.
 - Quoting style of values is left untouched.
 - With `-sort`, comments stay in their original position in the file
   rather than moving with the key they were written above.
