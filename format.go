@@ -116,6 +116,33 @@ func sortEntries(s *section) {
 	}
 }
 
+// normalizeValue strips quotes around a value when they aren't doing any
+// work, and prefers double quotes over single when quotes are kept. Quotes
+// are considered load-bearing if the quoted content is empty, has leading
+// or trailing whitespace, or contains a comment marker character (both of
+// which would otherwise be lost or misread once unquoted). A single-quoted
+// value is only switched to double quotes if it doesn't itself contain a
+// double quote, so the swap can't change what the value means.
+func normalizeValue(value string) string {
+	if len(value) < 2 {
+		return value
+	}
+	quote := rune(value[0])
+	if (quote != '"' && quote != '\'') || rune(value[len(value)-1]) != quote {
+		return value
+	}
+	inner := value[1 : len(value)-1]
+
+	needsQuotes := inner == "" || inner != strings.TrimSpace(inner) || strings.ContainsAny(inner, ";#")
+	if !needsQuotes {
+		return inner
+	}
+	if quote == '\'' && !strings.Contains(inner, `"`) {
+		return `"` + inner + `"`
+	}
+	return value
+}
+
 // renderItems turns a section's items into normalised lines, one per item.
 func renderItems(items []entry) []string {
 	lines := make([]string, 0, len(items))
@@ -132,7 +159,7 @@ func renderItems(items []entry) []string {
 		case kindRaw:
 			lines = append(lines, it.text)
 		case kindEntry:
-			line := it.key + " = " + it.value
+			line := it.key + " = " + normalizeValue(it.value)
 			if it.comment != "" {
 				line += " ; " + it.comment
 			}
@@ -162,9 +189,10 @@ func collapseBlanks(lines []string) []string {
 }
 
 // Format reads an INI file from r and returns a normalised version: a single
-// "key = value" spacing style, one comment marker, at most one blank line
-// between entries, and exactly one blank line before each section header.
-// If sortKeys is true, entries within each section are sorted alphabetically
+// "key = value" spacing style, one comment marker, quotes around values
+// stripped unless they're load-bearing, at most one blank line between
+// entries, and exactly one blank line before each section header. If
+// sortKeys is true, entries within each section are sorted alphabetically
 // by key.
 func Format(r io.Reader, sortKeys bool) (string, error) {
 	sections, err := parse(r)

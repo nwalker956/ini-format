@@ -99,6 +99,31 @@ func TestFormat(t *testing.T) {
 			in:   `name="a;b" ; that's the name` + "\n",
 			want: `name = "a;b" ; that's the name` + "\n",
 		},
+		{
+			name: "unnecessary double quotes are stripped",
+			in:   `name="simple"` + "\n",
+			want: "name = simple\n",
+		},
+		{
+			name: "unnecessary single quotes are stripped",
+			in:   "name='simple'\n",
+			want: "name = simple\n",
+		},
+		{
+			name: "single quotes protecting whitespace are converted to double",
+			in:   "name=' padded '\n",
+			want: `name = " padded "` + "\n",
+		},
+		{
+			name: "single quotes are kept when converting would change meaning",
+			in:   `name=' "quoted" padded '` + "\n",
+			want: `name = ' "quoted" padded '` + "\n",
+		},
+		{
+			name: "empty quoted value is kept quoted",
+			in:   `name=""` + "\n",
+			want: `name = ""` + "\n",
+		},
 	}
 
 	for _, tc := range cases {

@@ -17,6 +17,11 @@ to read.
 - a single `key = value` spacing style
 - comments normalised to `; text`, including inline trailing comments
   (`port = 8080 # default` becomes `port = 8080 ; default`)
+- quotes around values stripped when they aren't doing anything
+  (`name = "simple"` becomes `name = simple`); quotes kept when they
+  protect leading/trailing whitespace, an empty value, or a `;`/`#`
+  character, and single quotes are switched to double quotes when that's
+  safe to do
 - at most one blank line between entries
 - exactly one blank line before every section header
 - no leading or trailing blank lines
@@ -75,7 +80,6 @@ path = /var/log/app.log
 
 ## Current limitations
 
-- Quoting style of values is left untouched.
 - With `-sort`, comments stay in their original position in the file
   rather than moving with the key they were written above.
 
