@@ -25,7 +25,9 @@ to read.
 - at most one blank line between entries
 - exactly one blank line before every section header
 - no leading or trailing blank lines
-- optionally, keys sorted alphabetically within each section (`-sort`)
+- optionally, keys sorted alphabetically within each section (`-sort`);
+  a comment written directly above a key (no blank line between them)
+  moves with that key
 
 It does not try to validate the file or reject anything: comments,
 section headers, and lines it can't parse as `key=value` are all kept
@@ -77,11 +79,6 @@ level = debug
 ; where to write logs
 path = /var/log/app.log
 ```
-
-## Current limitations
-
-- With `-sort`, comments stay in their original position in the file
-  rather than moving with the key they were written above.
 
 ## Building
 

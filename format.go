@@ -95,25 +95,65 @@ func splitInlineComment(value string) (string, string) {
 	return value, ""
 }
 
+// block is a run of items that moves as a unit when a section is sorted.
+// Most blocks are a single item; a run of comment lines directly above a
+// key, with no blank line in between, is treated as attached to that key
+// and forms one block together with it.
+type block struct {
+	items    []entry
+	sortable bool
+	key      string
+}
+
 // sortEntries reorders the key/value lines in a section alphabetically by
-// key, case-insensitively. Comments, blanks and raw lines stay in their
-// original slot, so a comment written above a key may no longer sit next
-// to that same key once the keys have moved.
+// key, case-insensitively. Blank lines, raw lines, and comments that aren't
+// immediately followed by a key stay in their original slot.
 func sortEntries(s *section) {
-	var positions []int
-	var entries []entry
-	for i, it := range s.items {
+	var blocks []block
+	for i := 0; i < len(s.items); {
+		it := s.items[i]
 		if it.kind == kindEntry {
-			positions = append(positions, i)
-			entries = append(entries, it)
+			blocks = append(blocks, block{items: []entry{it}, sortable: true, key: it.key})
+			i++
+			continue
+		}
+		if it.kind == kindComment {
+			j := i
+			for j < len(s.items) && s.items[j].kind == kindComment {
+				j++
+			}
+			if j < len(s.items) && s.items[j].kind == kindEntry {
+				items := append([]entry(nil), s.items[i:j+1]...)
+				blocks = append(blocks, block{items: items, sortable: true, key: s.items[j].key})
+				i = j + 1
+				continue
+			}
+		}
+		blocks = append(blocks, block{items: []entry{it}})
+		i++
+	}
+
+	var sortable []block
+	for _, b := range blocks {
+		if b.sortable {
+			sortable = append(sortable, b)
 		}
 	}
-	sort.SliceStable(entries, func(i, j int) bool {
-		return strings.ToLower(entries[i].key) < strings.ToLower(entries[j].key)
+	sort.SliceStable(sortable, func(i, j int) bool {
+		return strings.ToLower(sortable[i].key) < strings.ToLower(sortable[j].key)
 	})
-	for n, pos := range positions {
-		s.items[pos] = entries[n]
+
+	items := make([]entry, 0, len(s.items))
+	n := 0
+	for _, b := range blocks {
+		if b.sortable {
+			items = append(items, sortable[n].items...)
+			n++
+		} else {
+			items = append(items, b.items...)
+		}
 	}
+	s.items = items
 }
 
 // normalizeValue strips quotes around a value when they aren't doing any

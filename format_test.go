@@ -69,10 +69,28 @@ func TestFormat(t *testing.T) {
 			want: "[a]\napple = 2\nMango = 3\nZebra = 1\n",
 		},
 		{
-			name: "sort leaves comments in their original slot",
+			name: "sort keeps a comment attached to the key directly below it",
 			in:   "[a]\n; about zebra\nzebra=1\napple=2\n",
 			sort: true,
-			want: "[a]\n; about zebra\napple = 2\nzebra = 1\n",
+			want: "[a]\napple = 2\n; about zebra\nzebra = 1\n",
+		},
+		{
+			name: "sort keeps a run of comments attached to the key below them",
+			in:   "[a]\n; first note\n; second note\nzebra=1\napple=2\n",
+			sort: true,
+			want: "[a]\napple = 2\n; first note\n; second note\nzebra = 1\n",
+		},
+		{
+			name: "sort leaves a comment in place when a blank line separates it from the key below",
+			in:   "[a]\n; general note\n\nzebra=1\napple=2\n",
+			sort: true,
+			want: "[a]\n; general note\n\napple = 2\nzebra = 1\n",
+		},
+		{
+			name: "sort leaves a trailing comment with no key below it in place",
+			in:   "[a]\nzebra=1\napple=2\n; trailing note\n",
+			sort: true,
+			want: "[a]\napple = 2\nzebra = 1\n; trailing note\n",
 		},
 		{
 			name: "extracts inline trailing comment",
