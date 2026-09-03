@@ -39,10 +39,13 @@ verbatim (just re-indented), so nothing is silently dropped.
 go run . config.ini            # print the formatted version to stdout
 go run . -w config.ini         # rewrite the file in place
 go run . -sort -w config.ini   # also sort keys within each section
+go run . -diff config.ini      # show what would change, as a unified diff
 cat config.ini | go run .      # read from stdin, write to stdout
 ```
 
 Multiple files can be passed at once; each is formatted independently.
+`-diff` takes precedence over `-w`: it prints what would change without
+touching the file.
 
 ### Example
 
