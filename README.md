@@ -50,6 +50,22 @@ diff, it only reports (one path per line, to stdout) which inputs would
 change and exits with status 1 if any would. That makes it suitable for a CI
 check that fails the build on unformatted files.
 
+### Config file
+
+If a `.inifmtrc` file exists in the current directory, it sets default
+values for `-w`, `-sort`, `-diff`, and `-check`, so a project can pin its
+preferred settings instead of everyone remembering the right flags. It's
+itself an INI file:
+
+```ini
+sort = true
+w = true
+```
+
+Any flag actually given on the command line overrides the config file. Use
+`-config path/to/file` to read defaults from somewhere other than
+`.inifmtrc` in the current directory.
+
 ### Example
 
 Input:

@@ -19,7 +19,15 @@ func main() {
 	doSort := flag.Bool("sort", false, "sort keys alphabetically within each section")
 	showDiff := flag.Bool("diff", false, "print a diff instead of writing or printing the result")
 	check := flag.Bool("check", false, "exit with status 1 if input is not already formatted; writes nothing")
+	configPath := flag.String("config", "", "path to a config file setting default flags (default: .inifmtrc in the current directory, if present)")
 	flag.Parse()
+
+	cfg, err := loadConfig(*configPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "inifmt:", err)
+		os.Exit(1)
+	}
+	applyConfig(&cfg, write, doSort, showDiff, check)
 
 	args := flag.Args()
 	if len(args) == 0 {
@@ -59,6 +67,28 @@ func main() {
 		}
 	}
 	os.Exit(status)
+}
+
+// applyConfig fills in any flag that wasn't given explicitly on the command
+// line with the corresponding value from cfg. Flags the user did set take
+// priority over the config file, which is why this runs after flag.Parse
+// rather than being used to seed the flag defaults.
+func applyConfig(cfg *config, write, doSort, showDiff, check *bool) {
+	set := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { set[f.Name] = true })
+
+	if !set["w"] {
+		*write = cfg.write
+	}
+	if !set["sort"] {
+		*doSort = cfg.sort
+	}
+	if !set["diff"] {
+		*showDiff = cfg.diff
+	}
+	if !set["check"] {
+		*check = cfg.check
+	}
 }
 
 func processFile(path string, write, doSort, showDiff, check bool) error {
