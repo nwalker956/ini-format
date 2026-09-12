@@ -142,6 +142,17 @@ func TestFormat(t *testing.T) {
 			in:   `name=""` + "\n",
 			want: `name = ""` + "\n",
 		},
+		{
+			name: "repeated section header merges into one section",
+			in:   "[a]\nx=1\n[b]\ny=2\n[a]\nz=3\n",
+			want: "[a]\nx = 1\nz = 3\n\n[b]\ny = 2\n",
+		},
+		{
+			name: "merged section keeps sort scoped to the combined items",
+			in:   "[a]\nzebra=1\n[a]\napple=2\n",
+			sort: true,
+			want: "[a]\napple = 2\nzebra = 1\n",
+		},
 	}
 
 	for _, tc := range cases {

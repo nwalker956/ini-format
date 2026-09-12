@@ -95,6 +95,32 @@ func splitInlineComment(value string) (string, string) {
 	return value, ""
 }
 
+// mergeSections combines sections that share a name, so a file with the same
+// [header] written more than once (common after a hand merge, or repeated
+// runs of some other tool that just appends) ends up with one section
+// instead of several. The merged section keeps the position of the first
+// occurrence and appends each later occurrence's items in the order they
+// were found; nothing is deduplicated or dropped. The unnamed global section
+// can only ever appear once, since any "[" line ends it for good, so it
+// passes through untouched.
+func mergeSections(sections []*section) []*section {
+	index := make(map[string]int, len(sections))
+	merged := make([]*section, 0, len(sections))
+	for _, s := range sections {
+		if s.name == "" {
+			merged = append(merged, s)
+			continue
+		}
+		if i, ok := index[s.name]; ok {
+			merged[i].items = append(merged[i].items, s.items...)
+			continue
+		}
+		index[s.name] = len(merged)
+		merged = append(merged, s)
+	}
+	return merged
+}
+
 // block is a run of items that moves as a unit when a section is sorted.
 // Most blocks are a single item; a run of comment lines directly above a
 // key, with no blank line in between, is treated as attached to that key
@@ -231,14 +257,15 @@ func collapseBlanks(lines []string) []string {
 // Format reads an INI file from r and returns a normalised version: a single
 // "key = value" spacing style, one comment marker, quotes around values
 // stripped unless they're load-bearing, at most one blank line between
-// entries, and exactly one blank line before each section header. If
-// sortKeys is true, entries within each section are sorted alphabetically
-// by key.
+// entries, and exactly one blank line before each section header. Sections
+// with the same name are merged into one. If sortKeys is true, entries
+// within each section are sorted alphabetically by key.
 func Format(r io.Reader, sortKeys bool) (string, error) {
 	sections, err := parse(r)
 	if err != nil {
 		return "", fmt.Errorf("parse: %w", err)
 	}
+	sections = mergeSections(sections)
 
 	var b strings.Builder
 	for _, s := range sections {

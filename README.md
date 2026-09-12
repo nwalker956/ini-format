@@ -25,6 +25,8 @@ to read.
 - at most one blank line between entries
 - exactly one blank line before every section header
 - no leading or trailing blank lines
+- sections with the same name merged into one, in the order they first
+  appeared, with each repeat's keys appended after the first occurrence's
 - optionally, keys sorted alphabetically within each section (`-sort`);
   a comment written directly above a key (no blank line between them)
   moves with that key
