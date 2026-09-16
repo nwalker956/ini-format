@@ -33,7 +33,11 @@ to read.
 
 It does not try to validate the file or reject anything: comments,
 section headers, and lines it can't parse as `key=value` are all kept
-verbatim (just re-indented), so nothing is silently dropped.
+verbatim (just re-indented), so nothing is silently dropped. That includes
+a key written twice in the same section (or in two occurrences of the same
+`[header]`, since those get merged) - both copies are kept, in order. Run
+with `-dupe-check` if you'd rather be told about that than have it happen
+quietly.
 
 ## Usage
 
@@ -43,6 +47,7 @@ go run . -w config.ini         # rewrite the file in place
 go run . -sort -w config.ini   # also sort keys within each section
 go run . -diff config.ini      # show what would change, as a unified diff
 go run . -check config.ini     # exit 1 if the file isn't already formatted
+go run . -dupe-check config.ini  # exit 1 and list keys that repeat in a section
 cat config.ini | go run .      # read from stdin, write to stdout
 ```
 
@@ -52,12 +57,19 @@ diff, it only reports (one path per line, to stdout) which inputs would
 change and exits with status 1 if any would. That makes it suitable for a CI
 check that fails the build on unformatted files.
 
+`-dupe-check` takes precedence over all of the above: it never writes,
+diffs, or reports formatting status. It only looks for keys that occur more
+than once within the same section (matched case-insensitively, the same way
+`-sort` compares them) and, for each file, prints one line per repeated key
+in the form `path: [section] key appears N times` before exiting with
+status 1. A clean file produces no output.
+
 ### Config file
 
 If a `.inifmtrc` file exists in the current directory, it sets default
-values for `-w`, `-sort`, `-diff`, and `-check`, so a project can pin its
-preferred settings instead of everyone remembering the right flags. It's
-itself an INI file:
+values for `-w`, `-sort`, `-diff`, `-check`, and `-dupe-check`, so a project
+can pin its preferred settings instead of everyone remembering the right
+flags. It's itself an INI file:
 
 ```ini
 sort = true

@@ -80,6 +80,18 @@ func TestLoadConfigDiscoversDefaultPath(t *testing.T) {
 	}
 }
 
+func TestLoadConfigDupeCheck(t *testing.T) {
+	path := writeConfig(t, "dupe-check = true\n")
+
+	cfg, err := loadConfig(path)
+	if err != nil {
+		t.Fatalf("loadConfig returned error: %v", err)
+	}
+	if !cfg.dupeCheck {
+		t.Error("cfg.dupeCheck = false, want true")
+	}
+}
+
 func TestLoadConfigUnknownKey(t *testing.T) {
 	path := writeConfig(t, "banana = true\n")
 

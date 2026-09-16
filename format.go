@@ -121,6 +121,70 @@ func mergeSections(sections []*section) []*section {
 	return merged
 }
 
+// duplicateKey describes a key that appears more than once within the same
+// section, after sections sharing a name have been merged. Section is ""
+// for the unnamed global section.
+type duplicateKey struct {
+	section string
+	key     string
+	count   int
+}
+
+func (d duplicateKey) String() string {
+	if d.section == "" {
+		return fmt.Sprintf("%s appears %d times", d.key, d.count)
+	}
+	return fmt.Sprintf("[%s] %s appears %d times", d.section, d.key, d.count)
+}
+
+// findDuplicateKeys reports, for each section, any key that occurs more than
+// once. Keys are compared case-insensitively, matching how -sort treats
+// them, so Port and port count as the same key. Results are ordered by
+// section, then by each key's first occurrence within it.
+func findDuplicateKeys(sections []*section) []duplicateKey {
+	type count struct {
+		key string // original casing of the first occurrence
+		n   int
+	}
+	var dupes []duplicateKey
+	for _, s := range sections {
+		seen := map[string]*count{}
+		var order []string
+		for _, it := range s.items {
+			if it.kind != kindEntry {
+				continue
+			}
+			lower := strings.ToLower(it.key)
+			c, ok := seen[lower]
+			if !ok {
+				c = &count{key: it.key}
+				seen[lower] = c
+				order = append(order, lower)
+			}
+			c.n++
+		}
+		for _, lower := range order {
+			if c := seen[lower]; c.n > 1 {
+				dupes = append(dupes, duplicateKey{section: s.name, key: c.key, count: c.n})
+			}
+		}
+	}
+	return dupes
+}
+
+// FindDuplicateKeys parses r and reports keys that appear more than once
+// within the same section, after sections sharing a name are merged into
+// one. It doesn't modify anything; it's the read-only counterpart to
+// Format's silent "keep both" behaviour.
+func FindDuplicateKeys(r io.Reader) ([]duplicateKey, error) {
+	sections, err := parse(r)
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+	sections = mergeSections(sections)
+	return findDuplicateKeys(sections), nil
+}
+
 // block is a run of items that moves as a unit when a section is sorted.
 // Most blocks are a single item; a run of comment lines directly above a
 // key, with no blank line in between, is treated as attached to that key

@@ -11,10 +11,11 @@ import (
 // flag given explicitly on the command line overrides the corresponding
 // config value.
 type config struct {
-	sort  bool
-	write bool
-	diff  bool
-	check bool
+	sort      bool
+	write     bool
+	diff      bool
+	check     bool
+	dupeCheck bool
 }
 
 // defaultConfigName is the file inifmt looks for in the current directory
@@ -23,7 +24,7 @@ const defaultConfigName = ".inifmtrc"
 
 // loadConfig reads flag defaults from an inifmt config file. The file is
 // itself INI syntax, with top-level keys named after their flags (w, sort,
-// diff, check) set to true or false.
+// diff, check, dupe-check) set to true or false.
 //
 // A missing file at the default location is not an error, since most
 // directories won't have one. A missing file named explicitly with path is
@@ -66,6 +67,8 @@ func loadConfig(path string) (config, error) {
 				cfg.diff = b
 			case "check":
 				cfg.check = b
+			case "dupe-check":
+				cfg.dupeCheck = b
 			default:
 				return cfg, fmt.Errorf("%s: unknown key %q", path, it.key)
 			}

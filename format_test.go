@@ -206,6 +206,62 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestFindDuplicateKeys(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want []duplicateKey
+	}{
+		{
+			name: "no duplicates",
+			in:   "[a]\nx=1\ny=2\n",
+			want: nil,
+		},
+		{
+			name: "duplicate within a section",
+			in:   "[a]\nx=1\nx=2\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 2}},
+		},
+		{
+			name: "duplicate is case-insensitive, keeps first casing seen",
+			in:   "[a]\nHost=1\nhost=2\nHOST=3\n",
+			want: []duplicateKey{{section: "a", key: "Host", count: 3}},
+		},
+		{
+			name: "same key in different sections is not a duplicate",
+			in:   "[a]\nx=1\n[b]\nx=2\n",
+			want: nil,
+		},
+		{
+			name: "duplicate introduced by merging sections with the same name",
+			in:   "[a]\nx=1\n[b]\ny=2\n[a]\nx=3\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 2}},
+		},
+		{
+			name: "duplicate in the unnamed global section",
+			in:   "x=1\nx=2\n[a]\ny=3\n",
+			want: []duplicateKey{{section: "", key: "x", count: 2}},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := FindDuplicateKeys(strings.NewReader(tc.in))
+			if err != nil {
+				t.Fatalf("FindDuplicateKeys returned error: %v", err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("FindDuplicateKeys(%q) = %+v, want %+v", tc.in, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("FindDuplicateKeys(%q)[%d] = %+v, want %+v", tc.in, i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestCollapseBlanks(t *testing.T) {
 	cases := []struct {
 		name string
