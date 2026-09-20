@@ -242,6 +242,26 @@ func TestFindDuplicateKeys(t *testing.T) {
 			in:   "x=1\nx=2\n[a]\ny=3\n",
 			want: []duplicateKey{{section: "", key: "x", count: 2}},
 		},
+		{
+			name: "duplicate with the same value every time is not a conflict",
+			in:   "[a]\nx=1\nx=1\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 2, conflict: false}},
+		},
+		{
+			name: "duplicate with a differing value is flagged as a conflict",
+			in:   "[a]\nx=1\nx=2\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 2, conflict: true}},
+		},
+		{
+			name: "conflict persists even if a later occurrence matches the first",
+			in:   "[a]\nx=1\nx=2\nx=1\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 3, conflict: true}},
+		},
+		{
+			name: "conflict introduced by merging sections with the same name",
+			in:   "[a]\nx=1\n[a]\nx=2\n",
+			want: []duplicateKey{{section: "a", key: "x", count: 2, conflict: true}},
+		},
 	}
 
 	for _, tc := range cases {

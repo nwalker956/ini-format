@@ -123,18 +123,27 @@ func mergeSections(sections []*section) []*section {
 
 // duplicateKey describes a key that appears more than once within the same
 // section, after sections sharing a name have been merged. Section is ""
-// for the unnamed global section.
+// for the unnamed global section. Conflict is set when the repeated
+// occurrences don't all carry the same value, which is the case most worth
+// flagging: same-value repeats are usually harmless copy-paste, but
+// differing values mean one of them is silently overriding the others in
+// whatever last read the file.
 type duplicateKey struct {
-	section string
-	key     string
-	count   int
+	section  string
+	key      string
+	count    int
+	conflict bool
 }
 
 func (d duplicateKey) String() string {
-	if d.section == "" {
-		return fmt.Sprintf("%s appears %d times", d.key, d.count)
+	suffix := ""
+	if d.conflict {
+		suffix = " with differing values"
 	}
-	return fmt.Sprintf("[%s] %s appears %d times", d.section, d.key, d.count)
+	if d.section == "" {
+		return fmt.Sprintf("%s appears %d times%s", d.key, d.count, suffix)
+	}
+	return fmt.Sprintf("[%s] %s appears %d times%s", d.section, d.key, d.count, suffix)
 }
 
 // findDuplicateKeys reports, for each section, any key that occurs more than
@@ -143,8 +152,10 @@ func (d duplicateKey) String() string {
 // section, then by each key's first occurrence within it.
 func findDuplicateKeys(sections []*section) []duplicateKey {
 	type count struct {
-		key string // original casing of the first occurrence
-		n   int
+		key      string // original casing of the first occurrence
+		n        int
+		value    string // value of the first occurrence
+		conflict bool
 	}
 	var dupes []duplicateKey
 	for _, s := range sections {
@@ -157,15 +168,19 @@ func findDuplicateKeys(sections []*section) []duplicateKey {
 			lower := strings.ToLower(it.key)
 			c, ok := seen[lower]
 			if !ok {
-				c = &count{key: it.key}
+				c = &count{key: it.key, value: it.value}
 				seen[lower] = c
 				order = append(order, lower)
+				continue
 			}
 			c.n++
+			if it.value != c.value {
+				c.conflict = true
+			}
 		}
 		for _, lower := range order {
-			if c := seen[lower]; c.n > 1 {
-				dupes = append(dupes, duplicateKey{section: s.name, key: c.key, count: c.n})
+			if c := seen[lower]; c.n > 0 {
+				dupes = append(dupes, duplicateKey{section: s.name, key: c.key, count: c.n + 1, conflict: c.conflict})
 			}
 		}
 	}

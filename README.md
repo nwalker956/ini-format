@@ -62,7 +62,10 @@ diffs, or reports formatting status. It only looks for keys that occur more
 than once within the same section (matched case-insensitively, the same way
 `-sort` compares them) and, for each file, prints one line per repeated key
 in the form `path: [section] key appears N times` before exiting with
-status 1. A clean file produces no output.
+status 1. A clean file produces no output. If the repeats don't all carry
+the same value, the line says so (`... appears N times with differing
+values`) - that's the case most worth a second look, since it means the
+last one read is silently winning over the rest.
 
 ### Config file
 
